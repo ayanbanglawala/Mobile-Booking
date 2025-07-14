@@ -1,45 +1,154 @@
-import axios from 'axios';
-import React, { useState } from 'react';
-import './App.css'
-import Home from './pages/Home/Home';
-import Login from './pages/Authentication/Login';
-import Signup from './pages/Authentication/Signup';
-import ForgotPassword from './pages/Authentication/ForgetPassword';
-import ProductsList from './pages/Products Listing/ProductsList';
-import Product from './pages/Products Listing/Product';
-import ViewCart from './pages/Cart/ViewCart';
-import AddressSelect from './pages/Cart/AddressSelect';
-import Payment from './pages/Checkout/Payment';
-import {Toaster} from 'react-hot-toast';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import { ToastContainer } from "react-toastify"
+import "react-toastify/dist/ReactToastify.css"
 
-import { Routes, Route, Navigate } from "react-router-dom"
-import AddProduct from './pages/Dashboard/AddProduct';
-import { useAuthContext } from './Context/AuthContext';
-import Orders from './pages/Checkout/Orders';
-import Profile from './pages/Profile/Profile';
-import Dashboard from './pages/Dashboard/Dashboard';
+import { AuthProvider } from "./contexts/AuthContext"
+import Layout from "./components/Layout"
+import ProtectedRoute from "./components/ProtectedRoute"
+import Login from "./pages/Login"
+import Register from "./pages/Register"
+import Dashboard from "./pages/Dashboard"
+import Bookings from "./pages/Bookings"
+import Cards from "./pages/Cards"
+import Platforms from "./pages/Platforms"
+import Inventory from "./pages/Inventory"
+import AdminDashboard from "./pages/admin/AdminDashboard"
+import AdminInventory from "./pages/admin/AdminInventory"
+import Dealers from "./pages/admin/Dealers"
+import DealerBatches from "./pages/admin/DealerBatches"
+import DealerBatchDetails from "./pages/admin/DealerBatchDetails"
+import Users from "./pages/admin/Users"
+import UserDetails from "./pages/admin/UserDetails"
+import AdminWallet from "./pages/admin/AdminWallet" // Import new AdminWallet component
 
 function App() {
-  const {authUser} = useAuthContext();
   return (
-    <div>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgotpassword" element={<ForgotPassword />} />
-        <Route path="/products" element={<ProductsList />} />
-        <Route path="/product/:id" element={<Product />} />
-        <Route path="/cart" element={authUser ? <ViewCart /> : <Navigate to="/login" />} />
-        <Route path="/address" element={authUser ? <AddressSelect /> : <Navigate to="/login" />} />
-        <Route path="/payment" element={authUser ? <Payment /> : <Navigate to="/login" />} />
-        <Route path="/dashboard/addproduct" element={<AddProduct />} />
-        <Route path="/orders" element={authUser ? <Orders /> :<Navigate to="/login"/>} />
-        <Route path="/profile" element={authUser ? <Profile /> :<Navigate to="/login"/>} />
-        <Route path="/dashboard" element={authUser ? <Dashboard /> :<Navigate to="/login"/>} />
-      </Routes>
-      <div><Toaster /></div>
-    </div>
+    <AuthProvider>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookings"
+              element={
+                <ProtectedRoute>
+                  <Bookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cards"
+              element={
+                <ProtectedRoute>
+                  <Cards />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/platforms"
+              element={
+                <ProtectedRoute>
+                  <Platforms />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory"
+              element={
+                <ProtectedRoute>
+                  <Inventory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/inventory"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminInventory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dealers"
+              element={
+                <ProtectedRoute adminOnly>
+                  <Dealers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dealer-batches/:dealerId"
+              element={
+                <ProtectedRoute adminOnly>
+                  <DealerBatches />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dealer-batch-details/:batchId"
+              element={
+                <ProtectedRoute adminOnly>
+                  <DealerBatchDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute adminOnly>
+                  <Users />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/user-details/:userId"
+              element={
+                <ProtectedRoute adminOnly>
+                  <UserDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/wallet" // New route for Admin Wallet
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminWallet />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
+        </Layout>
+      </Router>
+    </AuthProvider>
   )
 }
 

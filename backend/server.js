@@ -1,56 +1,42 @@
-import express from "express";
-import mongoose from "mongoose";
-import connectDB from "./config/db.js";
-import dotenv from 'dotenv';
-import cors from "cors";
-import cookieParser from "cookie-parser";
+const express = require("express")
+const mongoose = require("mongoose")
+const cors = require("cors")
+require("dotenv").config()
 
-import authRoutes from "./routes/auth.route.js";
-import products from "./routes/productAdmin.route.js";
-import allProducts from "./routes/products.route.js";
-import cart from "./routes/cart.route.js";
-import orders from "./routes/orders.route.js";
-import payments from "./routes/payments.route.js";
-import review from "./routes/review.route.js";
-import upload from './routes/upload.route.js';
-import path from "path";
+const authRoutes = require("./routes/auth")
+const bookingRoutes = require("./routes/bookings")
+const cardRoutes = require("./routes/cards")
+const platformRoutes = require("./routes/platforms")
+const dealerRoutes = require("./routes/dealers")
+const inventoryRoutes = require("./routes/inventory")
+const userRoutes = require("./routes/users")
+const dealerBatchRoutes = require("./routes/dealerBatches").router
+const walletRoutes = require("./routes/wallet") // Import new wallet routes
 
+const app = express()
 
-dotenv.config();
+// Middleware
+app.use(cors())
+app.use(express.json())
 
-connectDB();
-
-const app = express();
-app.use('/uploads', express.static('uploads'))
-app.use(cors());
-app.use(cors({
-    origin: 'http://localhost:5173',  // Allow only your frontend
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],         // Allowed methods
-  }));
-const port = process.env.PORT || 3000;
-app.use(express.json());
-app.use(cookieParser());
-
-// app.get("/",(req,res)=>{
-//     res.send("Hello World");
-// })
-
-const __dirname = path.resolve()
-
-app.use("/api/auth", authRoutes)
-app.use("/api/admin", products)
-app.use("/api/products", allProducts)
-app.use("/api/cart", cart)
-app.use("/api/orders", orders)
-app.use("/api/payments", payments)
-app.use("/api/products/review", review);
-app.use("/api/upload", upload);
-
-app.use(express.static(path.join(__dirname, "/frontend/dist")));
-
-app.get ("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "frontend", "dist","index.html"));
+// Database connection
+mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/mobile-booking", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
 })
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+
+// Routes
+app.use("/api/auth", authRoutes)
+app.use("/api/bookings", bookingRoutes)
+app.use("/api/cards", cardRoutes)
+app.use("/api/platforms", platformRoutes)
+app.use("/api/dealers", dealerRoutes)
+app.use("/api/inventory", inventoryRoutes)
+app.use("/api/users", userRoutes)
+app.use("/api/dealer-batches", dealerBatchRoutes)
+app.use("/api/wallet", walletRoutes) // New wallet routes
+
+const PORT = process.env.PORT || 5000
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
+})
