@@ -28,13 +28,27 @@ const DealerBatchDetails = () => {
     notes: "",
   })
 
+  // Simple mobile detection
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkIsMobile()
+    window.addEventListener("resize", checkIsMobile)
+    return () => window.removeEventListener("resize", checkIsMobile)
+  }, [])
+
   useEffect(() => {
     fetchBatchDetails()
   }, [batchId])
 
   const fetchBatchDetails = async () => {
     try {
-      const response = await axios.get(`https://mobile-booking-backend-production.up.railway.app/api/dealer-batches/${batchId}`)
+      const response = await axios.get(
+        `https://mobile-booking-backend-production.up.railway.app/api/dealer-batches/${batchId}`,
+      )
       setBatch(response.data)
     } catch (error) {
       toast.error("Error fetching batch details")
@@ -58,10 +72,13 @@ const DealerBatchDetails = () => {
     }
 
     try {
-      await axios.patch(`https://mobile-booking-backend-production.up.railway.app/api/dealer-batches/${batchId}/add-payment`, {
-        amount: Number(paymentFormData.amount),
-        notes: paymentFormData.notes,
-      })
+      await axios.patch(
+        `https://mobile-booking-backend-production.up.railway.app/api/dealer-batches/${batchId}/add-payment`,
+        {
+          amount: Number(paymentFormData.amount),
+          notes: paymentFormData.notes,
+        },
+      )
       toast.success("Payment added successfully!")
       setShowPaymentModal(false)
       setPaymentFormData({ amount: "", notes: "" })
@@ -114,6 +131,7 @@ const DealerBatchDetails = () => {
     }
 
     const config = statusConfig[status] || statusConfig.pending
+
     return (
       <span
         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${config.className}`}
@@ -153,265 +171,344 @@ const DealerBatchDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <div className="mb-6">
-          <Link
-            to={`/admin/dealer-batches/${batch.dealerId._id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Batches
-          </Link>
-        </div>
-
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Package className="w-8 h-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Batch {batch.batchId} Details</h1>
-          </div>
-          <p className="text-gray-600">
-            Details for mobiles assigned to {batch.dealerId?.name} on {new Date(batch.assignedAt).toLocaleDateString()}
-          </p>
-        </div>
-
-        {/* Batch Summary Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Batch Summary</h2>
-            {batch.status !== "completed_payment" && (
-              <button
-                onClick={() => setShowPaymentModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Payment
-              </button>
-            )}
+    <div className="w-full max-w-full overflow-x-hidden">
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Link
+              to={`/admin/dealer-batches/${batch.dealerId._id}`}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Batches
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="flex items-center gap-3">
-              <User className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-500">Dealer</p>
-                <p className="font-medium text-gray-900">{batch.dealerId?.name}</p>
-              </div>
+          {/* Header */}
+          <div className="mb-6 sm:mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <Package className="w-8 h-8 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Batch {batch.batchId} Details</h1>
             </div>
-            <div className="flex items-center gap-3">
-              <Package className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-500">Total Mobiles</p>
-                <p className="font-medium text-gray-900">{batch.bookingIds.length}</p>
-              </div>
+            <p className="text-sm sm:text-base text-gray-600">
+              Details for mobiles assigned to {batch.dealerId?.name} on{" "}
+              {new Date(batch.assignedAt).toLocaleDateString()}
+            </p>
+          </div>
+
+          {/* Batch Summary Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+              <h2 className="text-lg font-semibold text-gray-900">Batch Summary</h2>
+              {batch.status !== "completed_payment" && (
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Payment
+                </button>
+              )}
             </div>
-            <div className="flex items-center gap-3">
-              <DollarSign className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-500">Total Amount</p>
-                <p className="font-medium text-gray-900">₹{batch.totalAmount.toLocaleString()}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Dealer</p>
+                  <p className="font-medium text-gray-900">{batch.dealerId?.name}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <div>
-                <p className="text-sm text-gray-500">Paid Amount</p>
-                <p className="font-medium text-green-600">₹{batch.paidAmount.toLocaleString()}</p>
+              <div className="flex items-center gap-3">
+                <Package className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Total Mobiles</p>
+                  <p className="font-medium text-gray-900">{batch.bookingIds.length}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <div>
-                <p className="text-sm text-gray-500">Remaining Amount</p>
-                <p className={`font-medium ${batch.remainingAmount <= 0 ? "text-green-600" : "text-red-600"}`}>
-                  ₹{batch.remainingAmount.toLocaleString()}
-                </p>
+              <div className="flex items-center gap-3">
+                <DollarSign className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Total Amount</p>
+                  <p className="font-medium text-gray-900">₹{batch.totalAmount.toLocaleString()}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-sm text-gray-500">Status</p>
-                <div className="mt-1">{getBatchStatusBadge(batch.status)}</div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                <div>
+                  <p className="text-sm text-gray-500">Paid Amount</p>
+                  <p className="font-medium text-green-600">₹{batch.paidAmount.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <div>
+                  <p className="text-sm text-gray-500">Remaining Amount</p>
+                  <p className={`font-medium ${batch.remainingAmount <= 0 ? "text-green-600" : "text-red-600"}`}>
+                    ₹{batch.remainingAmount.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <div className="mt-1">{getBatchStatusBadge(batch.status)}</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Mobiles in Batch */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Mobiles in this Batch ({batch.bookingIds.length})</h2>
-          </div>
+          {/* Mobiles in Batch */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Mobiles in this Batch ({batch.bookingIds.length})</h2>
+            </div>
 
-          {batch.bookingIds.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Mobile Model
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Booking Price
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Assigned Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              {batch.bookingIds.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Mobile Model
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          User
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Booking Price
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Assigned Amount
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {batch.bookingIds.map((booking) => (
+                        <tr key={booking._id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <Smartphone className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm font-medium text-gray-900">{booking.mobileModel}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{booking.userId?.username || "N/A"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              ₹{booking.bookingPrice.toLocaleString()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              ₹{booking.dealerAmount?.toLocaleString() || "N/A"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">{getBookingStatusBadge(booking.status)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No mobiles found in this batch</h3>
+                  <p className="text-gray-500">
+                    This batch might have been created without any mobiles or data is missing.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden">
+              {batch.bookingIds.length > 0 ? (
+                <div className="p-4 space-y-4">
                   {batch.bookingIds.map((booking) => (
-                    <tr key={booking._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm font-medium text-gray-900">{booking.mobileModel}</span>
+                    <div key={booking._id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Smartphone className="w-4 h-4 text-gray-400" />
+                            <h3 className="text-base font-medium text-gray-900 truncate">{booking.mobileModel}</h3>
+                          </div>
+                          <p className="text-sm text-gray-600">User: {booking.userId?.username || "N/A"}</p>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{booking.userId?.username || "N/A"}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          ₹{booking.bookingPrice.toLocaleString()}
+                        <div className="ml-4">{getBookingStatusBadge(booking.status)}</div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Booking Price</p>
+                          <p className="text-sm font-medium text-gray-900">₹{booking.bookingPrice.toLocaleString()}</p>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          ₹{booking.dealerAmount?.toLocaleString() || "N/A"}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Assigned Amount</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            ₹{booking.dealerAmount?.toLocaleString() || "N/A"}
+                          </p>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">{getBookingStatusBadge(booking.status)}</td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No mobiles found in this batch</h3>
+                  <p className="text-gray-500">
+                    This batch might have been created without any mobiles or data is missing.
+                  </p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No mobiles found in this batch</h3>
-              <p className="text-gray-500">
-                This batch might have been created without any mobiles or data is missing.
-              </p>
+          </div>
+
+          {/* Payment History */}
+          {batch.payments.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Payment History</h2>
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Amount
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Notes
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {batch.payments.map((payment, index) => (
+                        <tr key={index} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="w-4 h-4 text-green-500" />
+                              <span className="text-sm font-medium text-gray-900">
+                                ₹{payment.amount.toLocaleString()}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-900">
+                                {new Date(payment.date).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{payment.notes || "N/A"}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden p-4 space-y-4">
+                {batch.payments.map((payment, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-green-500" />
+                        <span className="text-base font-medium text-gray-900">₹{payment.amount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">{new Date(payment.date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    {payment.notes && (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Notes</p>
+                        <p className="text-sm text-gray-900">{payment.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Payment Modal */}
+          {showPaymentModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">Add Payment to Batch {batch.batchId}</h3>
+                  <button
+                    onClick={() => setShowPaymentModal(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <XCircle className="w-6 h-6" />
+                  </button>
+                </div>
+                <form onSubmit={handleAddPayment} className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Amount</label>
+                    <input
+                      type="number"
+                      name="amount"
+                      value={paymentFormData.amount}
+                      onChange={handlePaymentChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="₹ 0"
+                      required
+                      min="0.01"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                    <textarea
+                      name="notes"
+                      value={paymentFormData.notes}
+                      onChange={handlePaymentChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      rows="3"
+                      placeholder="e.g., Cash payment, Bank transfer"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowPaymentModal(false)}
+                      className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Add Payment
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Payment History */}
-        {batch.payments.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Payment History</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Notes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {batch.payments.map((payment, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-green-500" />
-                          <span className="text-sm font-medium text-gray-900">₹{payment.amount.toLocaleString()}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-900">{new Date(payment.date).toLocaleDateString()}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{payment.notes || "N/A"}</div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Payment Modal */}
-        {showPaymentModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Add Payment to Batch {batch.batchId}</h3>
-                <button
-                  onClick={() => setShowPaymentModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <XCircle className="w-6 h-6" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddPayment} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Amount</label>
-                  <input
-                    type="number"
-                    name="amount"
-                    value={paymentFormData.amount}
-                    onChange={handlePaymentChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="₹ 0"
-                    required
-                    min="0.01"
-                    step="0.01"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
-                  <textarea
-                    name="notes"
-                    value={paymentFormData.notes}
-                    onChange={handlePaymentChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    rows="3"
-                    placeholder="e.g., Cash payment, Bank transfer"
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowPaymentModal(false)}
-                    className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Add Payment
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
