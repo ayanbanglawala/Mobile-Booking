@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect, useMemo } from "react"
 import axios from "axios"
 import { toast } from "react-toastify"
@@ -60,8 +59,10 @@ const Bookings = () => {
   const [showUserPaymentModal, setShowUserPaymentModal] = useState(false)
   const [selectedBillForPayment, setSelectedBillForPayment] = useState(null)
   const [selectedUserForPayment, setSelectedUserForPayment] = useState(null)
+  // New state for temporary selling prices in the payment modal
+  const [tempSellingPrices, setTempSellingPrices] = useState({})
 
-  // Individual price editing state
+  // Individual price editing state (for table view)
   const [editingPrices, setEditingPrices] = useState({})
 
   const [formData, setFormData] = useState({
@@ -307,34 +308,43 @@ const Bookings = () => {
   const handleMarkBillPaymentClick = (userInfo, bill) => {
     setSelectedBillForPayment(bill)
     setSelectedUserForPayment(userInfo)
+    // Initialize tempSellingPrices with current selling prices from the bill items
+    const initialPrices = Object.fromEntries(bill.items.map((item) => [item._id, item.sellingPrice]))
+    setTempSellingPrices(initialPrices)
     setShowUserPaymentModal(true)
   }
 
   const handleBillPaymentSubmit = async (e) => {
     e.preventDefault()
     if (!selectedBillForPayment || !selectedUserForPayment) return
+
     try {
-      // Update all items in the bill to payment_done status with their current selling prices
-      const updatePromises = selectedBillForPayment.items.map((item) =>
-        axios.patch(
+      // Update all items in the bill to payment_done status with their potentially edited selling prices
+      const updatePromises = selectedBillForPayment.items.map((item) => {
+        const newSellingPrice = tempSellingPrices[item._id]
+        if (!newSellingPrice || isNaN(Number(newSellingPrice))) {
+          throw new Error(`Invalid selling price for item ${item.mobileModel}`)
+        }
+        return axios.patch(
           `https://mobile-booking-backend-production.up.railway.app/api/bookings/${item._id}/mark-user-paid`,
           {
-            sellingPrice: item.sellingPrice,
+            sellingPrice: Number(newSellingPrice),
           },
-        ),
-      )
+        )
+      })
       await Promise.all(updatePromises)
       toast.success("All payments in the bill have been processed! ✅")
       setShowUserPaymentModal(false)
       setSelectedBillForPayment(null)
       setSelectedUserForPayment(null)
+      setTempSellingPrices({}) // Clear temp prices
       fetchBookings()
     } catch (error) {
       toast.error(error.response?.data?.message || "Error processing bill payment.")
     }
   }
 
-  // Handle individual item price update
+  // Handle individual item price update (for table view)
   const handleItemPriceUpdate = async (bookingId, newSellingPrice) => {
     if (!newSellingPrice || isNaN(Number(newSellingPrice))) {
       toast.error("Please enter a valid price")
@@ -511,7 +521,6 @@ Generated on: ${new Date().toLocaleString()}
         </button>,
       )
     }
-
     // Status-based action buttons with proper labels
     if (booking.status === "pending") {
       buttons.push(
@@ -703,7 +712,7 @@ Generated on: ${new Date().toLocaleString()}
                                       title="Process Payment for All Items"
                                     >
                                       <DollarSign className="h-4 w-4" />
-                                      Process Payment
+                                      Make Payment
                                     </button>
                                   )}
                                 </div>
@@ -1101,7 +1110,7 @@ Generated on: ${new Date().toLocaleString()}
                             {/* Bill Summary */}
                             <div className="mt-3 pt-3 border-t border-gray-200">
                               <div className="flex justify-between items-center text-sm">
-                                <span className="font-medium text-gray-900">Total Amount:</span>
+                                <span className="font-medium text-gray-700">Total Amount:</span>
                                 <span className="font-bold text-gray-900">
                                   ₹{bill.totalSellingPrice.toLocaleString()}
                                 </span>
@@ -1473,16 +1482,33 @@ Generated on: ${new Date().toLocaleString()}
               </div>
               <div className="mb-6">
                 <h5 className="font-medium text-gray-900 mb-3">Items to be paid:</h5>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
+                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded p-2">
                   {selectedBillForPayment.items.map((item) => (
-                    <div key={item._id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                      <div>
+                    <div
+                      key={item._id}
+                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2 bg-gray-50 rounded"
+                    >
+                      <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">{item.mobileModel}</p>
                         <p className="text-xs text-gray-500">Booking: ₹{item.bookingPrice.toLocaleString()}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">₹{item.sellingPrice.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">Selling Price</p>
+                      <div className="mt-2 sm:mt-0 flex items-center space-x-2">
+                        <label htmlFor={`sellingPrice-${item._id}`} className="sr-only">
+                          Selling Price for {item.mobileModel}
+                        </label>
+                        <input
+                          id={`sellingPrice-${item._id}`}
+                          type="number"
+                          value={tempSellingPrices[item._id] || ""}
+                          onChange={(e) =>
+                            setTempSellingPrices((prev) => ({
+                              ...prev,
+                              [item._id]: e.target.value,
+                            }))
+                          }
+                          className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Selling Price"
+                        />
                       </div>
                     </div>
                   ))}
@@ -1490,23 +1516,34 @@ Generated on: ${new Date().toLocaleString()}
               </div>
               <div className="mb-6 p-4 bg-blue-50 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Total Amount:</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Total Amount (based on current selling prices):
+                  </span>
                   <span className="text-lg font-bold text-gray-900">
-                    ₹{selectedBillForPayment.totalSellingPrice.toLocaleString()}
+                    ₹
+                    {Object.values(tempSellingPrices)
+                      .reduce((sum, price) => sum + Number(price || 0), 0)
+                      .toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-700">Total Profit/Loss:</span>
                   <span
                     className={`text-sm font-bold ${
-                      selectedBillForPayment.totalSellingPrice >= selectedBillForPayment.totalBookingPrice
+                      Object.values(tempSellingPrices).reduce((sum, price) => sum + Number(price || 0), 0) >=
+                      selectedBillForPayment.totalBookingPrice
                         ? "text-green-600"
                         : "text-red-600"
                     }`}
                   >
-                    {selectedBillForPayment.totalSellingPrice >= selectedBillForPayment.totalBookingPrice ? "+" : ""}₹
+                    {Object.values(tempSellingPrices).reduce((sum, price) => sum + Number(price || 0), 0) >=
+                    selectedBillForPayment.totalBookingPrice
+                      ? "+"
+                      : ""}
+                    ₹
                     {(
-                      selectedBillForPayment.totalSellingPrice - selectedBillForPayment.totalBookingPrice
+                      Object.values(tempSellingPrices).reduce((sum, price) => sum + Number(price || 0), 0) -
+                      selectedBillForPayment.totalBookingPrice
                     ).toLocaleString()}
                   </span>
                 </div>
