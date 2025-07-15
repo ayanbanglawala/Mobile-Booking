@@ -200,7 +200,7 @@ const Bookings = () => {
       }
       // Determine bill status and payment eligibility
       const allItemsPaid = acc[userId].bills[batchId].items.every((item) => item.status === "payment_done")
-      const allItemsGivenToAdmin = acc[userId].bills[batchId].items.every((item) => item.status === "given_to_admin")
+      const allItemsGivenToAdmin = acc[userId].bills[batchId].items.every((item) => item.status === "given_to_dealer")
       acc[userId].bills[batchId].isPaid = allItemsPaid
       acc[userId].bills[batchId].status = allItemsPaid ? "paid" : "pending" // Update bill status based on items
       acc[userId].bills[batchId].canMakePayment = allItemsGivenToAdmin && !allItemsPaid
