@@ -32,7 +32,7 @@ const Platforms = () => {
 
   const fetchPlatforms = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/platforms")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/platforms")
       setPlatforms(response.data)
     } catch (error) {
       toast.error("Error fetching platforms")
@@ -74,10 +74,10 @@ const Platforms = () => {
 
     try {
       if (editingPlatform) {
-        await axios.put(`https://mobile-booking-backend-production.up.railway.app/api/platforms/${editingPlatform._id}`, formData)
+        await axios.put(`https://mobile-booking-backend.vercel.app/api/platforms/${editingPlatform._id}`, formData)
         toast.success("Platform updated successfully! ✅")
       } else {
-        await axios.post("https://mobile-booking-backend-production.up.railway.app/api/platforms", formData)
+        await axios.post("https://mobile-booking-backend.vercel.app/api/platforms", formData)
         toast.success("Platform added successfully! 🎉")
       }
 
@@ -102,7 +102,7 @@ const Platforms = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this platform?")) {
       try {
-        await axios.delete(`https://mobile-booking-backend-production.up.railway.app/api/platforms/${id}`)
+        await axios.delete(`https://mobile-booking-backend.vercel.app/api/platforms/${id}`)
         toast.success("Platform deleted successfully! 🗑️")
         fetchPlatforms()
       } catch (error) {

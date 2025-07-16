@@ -34,7 +34,7 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/users")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/users")
       setUsers(response.data)
     } catch (error) {
       toast.error("Error fetching users")
@@ -75,7 +75,7 @@ const Users = () => {
     e.preventDefault()
 
     try {
-      await axios.put(`https://mobile-booking-backend-production.up.railway.app/api/users/${editingUser._id}`, formData)
+      await axios.put(`https://mobile-booking-backend.vercel.app/api/users/${editingUser._id}`, formData)
       toast.success("User updated successfully! ✅")
       setShowModal(false)
       setEditingUser(null)
@@ -98,7 +98,7 @@ const Users = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this user? This will also delete all their bookings.")) {
       try {
-        await axios.delete(`https://mobile-booking-backend-production.up.railway.app/api/users/${id}`)
+        await axios.delete(`https://mobile-booking-backend.vercel.app/api/users/${id}`)
         toast.success("User deleted successfully! 🗑️")
         fetchUsers()
       } catch (error) {

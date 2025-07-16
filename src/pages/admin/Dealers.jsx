@@ -46,7 +46,7 @@ const Dealers = () => {
 
   const fetchDealers = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/dealers")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/dealers")
       setDealers(response.data)
     } catch (error) {
       toast.error("Error fetching dealers")
@@ -84,12 +84,12 @@ const Dealers = () => {
     try {
       if (editingDealer) {
         await axios.put(
-          `https://mobile-booking-backend-production.up.railway.app/api/dealers/${editingDealer._id}`,
+          `https://mobile-booking-backend.vercel.app/api/dealers/${editingDealer._id}`,
           formData,
         )
         toast.success("Dealer updated successfully")
       } else {
-        await axios.post("https://mobile-booking-backend-production.up.railway.app/api/dealers", formData)
+        await axios.post("https://mobile-booking-backend.vercel.app/api/dealers", formData)
         toast.success("Dealer created successfully")
       }
 
@@ -116,7 +116,7 @@ const Dealers = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this dealer?")) {
       try {
-        await axios.delete(`https://mobile-booking-backend-production.up.railway.app/api/dealers/${id}`)
+        await axios.delete(`https://mobile-booking-backend.vercel.app/api/dealers/${id}`)
         toast.success("Dealer deleted successfully")
         fetchDealers()
       } catch (error) {

@@ -27,7 +27,7 @@ const Cards = () => {
 
   const fetchCards = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/cards")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/cards")
       setCards(response.data)
     } catch (error) {
       toast.error("Error fetching cards")
@@ -49,10 +49,10 @@ const Cards = () => {
 
     try {
       if (editingCard) {
-        await axios.put(`https://mobile-booking-backend-production.up.railway.app/api/cards/${editingCard._id}`, formData)
+        await axios.put(`https://mobile-booking-backend.vercel.app/api/cards/${editingCard._id}`, formData)
         toast.success("Card updated successfully!")
       } else {
-        await axios.post("https://mobile-booking-backend-production.up.railway.app/api/cards", formData)
+        await axios.post("https://mobile-booking-backend.vercel.app/api/cards", formData)
         toast.success("Card added successfully!")
       }
 
@@ -80,7 +80,7 @@ const Cards = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this card?")) {
       try {
-        await axios.delete(`https://mobile-booking-backend-production.up.railway.app/api/cards/${id}`)
+        await axios.delete(`https://mobile-booking-backend.vercel.app/api/cards/${id}`)
         toast.success("Card deleted successfully!")
         fetchCards()
       } catch (error) {

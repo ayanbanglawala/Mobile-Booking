@@ -99,7 +99,7 @@ const Bookings = () => {
   const fetchBookings = async () => {
     try {
       const response = await axios.get(
-        "https://mobile-booking-backend-production.up.railway.app/api/bookings"
+        "https://mobile-booking-backend.vercel.app/api/bookings"
       );
       setBookings(response.data);
     } catch (error) {
@@ -112,7 +112,7 @@ const Bookings = () => {
   const fetchPlatforms = async () => {
     try {
       const response = await axios.get(
-        "https://mobile-booking-backend-production.up.railway.app/api/platforms"
+        "https://mobile-booking-backend.vercel.app/api/platforms"
       );
       setPlatforms(response.data);
     } catch (error) {
@@ -123,7 +123,7 @@ const Bookings = () => {
   const fetchCards = async () => {
     try {
       const response = await axios.get(
-        "https://mobile-booking-backend-production.up.railway.app/api/cards"
+        "https://mobile-booking-backend.vercel.app/api/cards"
       );
       setCards(response.data);
     } catch (error) {
@@ -134,7 +134,7 @@ const Bookings = () => {
   const fetchDealers = async () => {
     try {
       const response = await axios.get(
-        "https://mobile-booking-backend-production.up.railway.app/api/dealers"
+        "https://mobile-booking-backend.vercel.app/api/dealers"
       );
       setDealers(response.data);
     } catch (error) {
@@ -277,13 +277,13 @@ const Bookings = () => {
               }
             : formData;
         await axios.put(
-          `https://mobile-booking-backend-production.up.railway.app/api/bookings/${editingBooking._id}`,
+          `https://mobile-booking-backend.vercel.app/api/bookings/${editingBooking._id}`,
           dataToSend
         );
         toast.success("Booking updated successfully! ✅");
       } else {
         await axios.post(
-          "https://mobile-booking-backend-production.up.railway.app/api/bookings",
+          "https://mobile-booking-backend.vercel.app/api/bookings",
           formData
         );
         toast.success("Booking created successfully! 🎉");
@@ -321,7 +321,7 @@ const Bookings = () => {
     if (window.confirm("Are you sure you want to delete this booking?")) {
       try {
         await axios.delete(
-          `https://mobile-booking-backend-production.up.railway.app/api/bookings/${id}`
+          `https://mobile-booking-backend.vercel.app/api/bookings/${id}`
         );
         toast.success("Booking deleted successfully! 🗑️");
         fetchBookings();
@@ -334,7 +334,7 @@ const Bookings = () => {
   const handleStatusChange = async (id, status) => {
     try {
       await axios.patch(
-        `https://mobile-booking-backend-production.up.railway.app/api/bookings/${id}/status`,
+        `https://mobile-booking-backend.vercel.app/api/bookings/${id}/status`,
         {
           status,
         }
@@ -369,7 +369,7 @@ const Bookings = () => {
           throw new Error(`Invalid selling price for item ${item.mobileModel}`);
         }
         return axios.patch(
-          `https://mobile-booking-backend-production.up.railway.app/api/bookings/${item._id}/mark-user-paid`,
+          `https://mobile-booking-backend.vercel.app/api/bookings/${item._id}/mark-user-paid`,
           {
             sellingPrice: Number(newSellingPrice),
           }
@@ -397,7 +397,7 @@ const Bookings = () => {
     }
     try {
       await axios.put(
-        `https://mobile-booking-backend-production.up.railway.app/api/bookings/${bookingId}`,
+        `https://mobile-booking-backend.vercel.app/api/bookings/${bookingId}`,
         {
           sellingPrice: Number(newSellingPrice),
         }

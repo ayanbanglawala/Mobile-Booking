@@ -28,7 +28,7 @@ const AdminDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/inventory/stats")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/inventory/stats")
       setStats(response.data)
     } catch (error) {
       console.error("Error fetching stats:", error)
@@ -39,7 +39,7 @@ const AdminDashboard = () => {
 
   const fetchWalletBalance = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/wallet")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/wallet")
       setWalletBalance(response.data.balance)
     } catch (error) {
       console.error("Error fetching wallet balance:", error)

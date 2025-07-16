@@ -47,7 +47,7 @@ const DealerBatchDetails = () => {
   const fetchBatchDetails = async () => {
     try {
       const response = await axios.get(
-        `https://mobile-booking-backend-production.up.railway.app/api/dealer-batches/${batchId}`,
+        `https://mobile-booking-backend.vercel.app/api/dealer-batches/${batchId}`,
       )
       setBatch(response.data)
     } catch (error) {
@@ -73,7 +73,7 @@ const DealerBatchDetails = () => {
 
     try {
       await axios.patch(
-        `https://mobile-booking-backend-production.up.railway.app/api/dealer-batches/${batchId}/add-payment`,
+        `https://mobile-booking-backend.vercel.app/api/dealer-batches/${batchId}/add-payment`,
         {
           amount: Number(paymentFormData.amount),
           notes: paymentFormData.notes,

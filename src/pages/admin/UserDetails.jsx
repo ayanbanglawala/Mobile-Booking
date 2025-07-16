@@ -28,7 +28,7 @@ const UserDetails = () => {
 
   const fetchUserDetails = async () => {
     try {
-      const response = await axios.get(`https://mobile-booking-backend-production.up.railway.app/api/users/${userId}`)
+      const response = await axios.get(`https://mobile-booking-backend.vercel.app/api/users/${userId}`)
       setUser(response.data.user)
       setBookings(response.data.bookings)
     } catch (error) {
@@ -40,7 +40,7 @@ const UserDetails = () => {
 
   const handleStatusChange = async (bookingId, status) => {
     try {
-      await axios.patch(`https://mobile-booking-backend-production.up.railway.app/api/bookings/${bookingId}/status`, { status })
+      await axios.patch(`https://mobile-booking-backend.vercel.app/api/bookings/${bookingId}/status`, { status })
       toast.success("Status updated successfully! ✅")
       fetchUserDetails()
     } catch (error) {

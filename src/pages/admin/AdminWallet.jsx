@@ -25,7 +25,7 @@ const AdminWallet = () => {
 
   const fetchWalletDetails = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/wallet")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/wallet")
       setWallet(response.data)
     } catch (error) {
       toast.error("Error fetching wallet details")
@@ -49,7 +49,7 @@ const AdminWallet = () => {
     }
 
     try {
-      await axios.post("https://mobile-booking-backend-production.up.railway.app/api/wallet/add-profit", {
+      await axios.post("https://mobile-booking-backend.vercel.app/api/wallet/add-profit", {
         amount: Number(profitFormData.amount),
         notes: profitFormData.notes,
       })

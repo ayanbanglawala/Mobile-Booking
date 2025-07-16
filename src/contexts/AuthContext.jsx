@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/auth/me")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/auth/me")
       setUser(response.data.user)
     } catch (error) {
       localStorage.removeItem("token")
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   const login = async (username, password) => {
-    const response = await axios.post("https://mobile-booking-backend-production.up.railway.app/api/auth/login", {
+    const response = await axios.post("https://mobile-booking-backend.vercel.app/api/auth/login", {
       username,
       password,
     })
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   const register = async (username, password, role) => {
-    const response = await axios.post("https://mobile-booking-backend-production.up.railway.app/api/auth/register", {
+    const response = await axios.post("https://mobile-booking-backend.vercel.app/api/auth/register", {
       username,
       password,
       role,

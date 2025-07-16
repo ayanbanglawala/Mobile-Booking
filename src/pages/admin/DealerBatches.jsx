@@ -34,7 +34,7 @@ const DealerBatches = () => {
 
   const fetchDealerBatches = async () => {
     try {
-      const response = await axios.get(`https://mobile-booking-backend-production.up.railway.app/api/dealer-batches/dealer/${dealerId}`)
+      const response = await axios.get(`https://mobile-booking-backend.vercel.app/api/dealer-batches/dealer/${dealerId}`)
       setBatches(response.data)
     } catch (error) {
       toast.error("Error fetching dealer batches")
@@ -45,7 +45,7 @@ const DealerBatches = () => {
 
   const fetchDealerInfo = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/dealers")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/dealers")
       const foundDealer = response.data.find((d) => d._id === dealerId)
       setDealerInfo(foundDealer)
     } catch (error) {

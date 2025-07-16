@@ -25,7 +25,7 @@ const Inventory = () => {
 
   const fetchInventory = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/inventory/user")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/inventory/user")
       setInventory(response.data)
     } catch (error) {
       toast.error("Error fetching inventory")
@@ -37,7 +37,7 @@ const Inventory = () => {
   const handleGiveToAdmin = async (bookingId) => {
     if (window.confirm("Are you sure you want to give this mobile to admin?")) {
       try {
-        await axios.patch(`https://mobile-booking-backend-production.up.railway.app/api/bookings/${bookingId}/status`, {
+        await axios.patch(`https://mobile-booking-backend.vercel.app/api/bookings/${bookingId}/status`, {
           status: "given_to_admin",
         })
         toast.success("Mobile marked as given to admin! ✅")

@@ -32,7 +32,7 @@ const DealerInventory = () => {
 
   const fetchDealerInventory = async () => {
     try {
-      const response = await axios.get(`https://mobile-booking-backend-production.up.railway.app/api/inventory/dealer/${dealerId}`)
+      const response = await axios.get(`https://mobile-booking-backend.vercel.app/api/inventory/dealer/${dealerId}`)
       setInventory(response.data)
     } catch (error) {
       toast.error("Error fetching dealer inventory")
@@ -43,7 +43,7 @@ const DealerInventory = () => {
 
   const fetchDealerInfo = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/dealers")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/dealers")
       const dealerInfo = response.data.find((d) => d._id === dealerId)
       setDealer(dealerInfo)
     } catch (error) {
@@ -54,7 +54,7 @@ const DealerInventory = () => {
   const handleMarkPaymentReceived = async (bookingId) => {
     if (window.confirm("Mark payment as received from dealer?")) {
       try {
-        await axios.patch(`https://mobile-booking-backend-production.up.railway.app/api/inventory/dealer-payment/${bookingId}`)
+        await axios.patch(`https://mobile-booking-backend.vercel.app/api/inventory/dealer-payment/${bookingId}`)
         toast.success("Payment marked as received")
         fetchDealerInventory()
         fetchDealerInfo()
@@ -67,7 +67,7 @@ const DealerInventory = () => {
   const handleMarkUserPaymentGiven = async (bookingId) => {
     if (window.confirm("Mark payment as given to user?")) {
       try {
-        await axios.patch(`https://mobile-booking-backend-production.up.railway.app/api/inventory/user-payment/${bookingId}`)
+        await axios.patch(`https://mobile-booking-backend.vercel.app/api/inventory/user-payment/${bookingId}`)
         toast.success("Payment marked as given to user")
         fetchDealerInventory()
       } catch (error) {

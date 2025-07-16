@@ -33,7 +33,7 @@ const AdminInventory = () => {
 
   const fetchInventory = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/inventory/admin")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/inventory/admin")
       setInventory(response.data)
     } catch (error) {
       toast.error("Error fetching inventory")
@@ -44,7 +44,7 @@ const AdminInventory = () => {
 
   const fetchDealers = async () => {
     try {
-      const response = await axios.get("https://mobile-booking-backend-production.up.railway.app/api/dealers")
+      const response = await axios.get("https://mobile-booking-backend.vercel.app/api/dealers")
       setDealers(response.data)
     } catch (error) {
       console.error("Error fetching dealers:", error)
@@ -100,7 +100,7 @@ const AdminInventory = () => {
     }
 
     try {
-      await axios.post("https://mobile-booking-backend-production.up.railway.app/api/inventory/assign-to-dealer", {
+      await axios.post("https://mobile-booking-backend.vercel.app/api/inventory/assign-to-dealer", {
         dealerId: assignData.dealerId,
         bookingIds: selectedBookings,
         amounts: assignData.amounts,
