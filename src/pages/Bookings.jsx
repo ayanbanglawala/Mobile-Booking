@@ -627,7 +627,7 @@ const Bookings = () => {
   const getActionButtons = (booking) => {
     const buttons = [];
     // Always show edit and delete for admin, only edit for users on their own bookings
-    if (user.role === "admin" || booking.userId?._id === user.id) {
+    if (user.role === "admin" || booking.userId?._id === user.id || user.role === "user") {
       buttons.push(
         <button
           key="edit"
@@ -640,7 +640,7 @@ const Bookings = () => {
         </button>
       );
     }
-    if (user.role === "admin") {
+    if (user.role === "admin" || user.role === "user") {
       buttons.push(
         <button
           key="delete"
