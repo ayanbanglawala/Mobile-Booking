@@ -331,7 +331,14 @@ const Bookings = () => {
     }
   };
 
-  const handleStatusChange = async (id, status) => {
+  // Replace the old function with THIS ONE
+const handleStatusChange = async (id, status) => {
+  // Create a user-friendly message from the status string (e.g., "given_to_admin" -> "given to admin")
+  const actionText = status.replace(/_/g, " ");
+  const confirmationMessage = `Are you sure you want to mark this booking as "${actionText}"?`;
+
+  // Use window.confirm to show the popup
+  if (window.confirm(confirmationMessage)) {
     try {
       await axios.patch(
         `https://mobile-booking-backend.vercel.app/api/bookings/${id}/status`,
@@ -344,7 +351,8 @@ const Bookings = () => {
     } catch (error) {
       toast.error("Error updating status");
     }
-  };
+  }
+};
 
   const handleMarkBillPaymentClick = (userInfo, bill) => {
     setSelectedBillForPayment(bill);
@@ -1443,9 +1451,11 @@ const Bookings = () => {
                           {new Date(booking.bookingDate).toLocaleDateString()}
                         </p>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      {getActionButtons(booking)}
+                      <div className="space-y-1">
+                        <p className="text-sm text-gray-500">
+                          {booking.card}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 mb-3">
@@ -1477,6 +1487,11 @@ const Bookings = () => {
                       )}
                     </div>
                     <div>{getStatusBadge(booking.status)}</div>
+                  </div>
+                  <div className="mt-4 border-t border-gray-200 pt-3">
+                      <div className="flex items-center space-x-2">
+                      {getActionButtons(booking)}
+                    </div>
                   </div>
                 </div>
               ))
