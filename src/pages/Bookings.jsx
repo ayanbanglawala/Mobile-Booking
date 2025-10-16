@@ -21,12 +21,14 @@ import {
   Package,
   Truck,
   UserCheck,
+  Calendar,
+  X,
 } from "lucide-react";
+import useDebounce from "./useDebounce";
 
 const Bookings = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
-  const [filteredBookings, setFilteredBookings] = useState([]);
   const [platforms, setPlatforms] = useState([]);
   const [cards, setCards] = useState([]);
   const [dealers, setDealers] = useState([]);
@@ -34,7 +36,7 @@ const Bookings = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingBooking, setEditingBooking] = useState(null);
 
-  // Simple mobile detection
+  // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkIsMobile = () => {
@@ -48,11 +50,22 @@ const Bookings = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [platformFilter, setPlatformFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  // Export modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFromDate, setExportFromDate] = useState("");
+  const [exportToDate, setExportToDate] = useState("");
+  const [exportFormat, setExportFormat] = useState("csv");
+  const [exporting, setExporting] = useState(false);
 
   // Collapsible state for user cards
   const [expandedUsers, setExpandedUsers] = useState(new Set());
@@ -61,27 +74,31 @@ const Bookings = () => {
   const [showUserPaymentModal, setShowUserPaymentModal] = useState(false);
   const [selectedBillForPayment, setSelectedBillForPayment] = useState(null);
   const [selectedUserForPayment, setSelectedUserForPayment] = useState(null);
-  // New state for temporary selling prices in the payment modal
   const [tempSellingPrices, setTempSellingPrices] = useState({});
+  const [dataLoading, setDataLoading] = useState(false);
+const [filtersLoading, setFiltersLoading] = useState(false);
+const debouncedSearchTerm = useDebounce(searchTerm, 500);
+const debouncedFromDate = useDebounce(fromDate, 500);
+const debouncedToDate = useDebounce(toDate, 500);
 
-  // Individual price editing state (for table view)
+  // Individual price editing state
   const [editingPrices, setEditingPrices] = useState({});
 
   const [formData, setFormData] = useState({
-  bookingDate: new Date().toISOString().split('T')[0], // This sets today's date in YYYY-MM-DD format
-  mobileModel: "",
-  bookingPrice: "",
-  sellingPrice: "",
-  platform: "",
-  card: "",
-  notes: "",
-  bookingAccount: "",
-  dealer: "",
-  bookingId: "",
-  status: "",
-  assignedToDealerId: "",
-  dealerAmount: "",
-});
+    bookingDate: new Date().toISOString().split('T')[0],
+    mobileModel: "",
+    bookingPrice: "",
+    sellingPrice: "",
+    platform: "",
+    card: "",
+    notes: "",
+    bookingAccount: "",
+    dealer: "",
+    bookingId: "",
+    status: "",
+    assignedToDealerId: "",
+    dealerAmount: "",
+  });
 
   useEffect(() => {
     fetchBookings();
@@ -93,21 +110,40 @@ const Bookings = () => {
   }, [user]);
 
   useEffect(() => {
-    filterBookings();
-  }, [bookings, searchTerm, statusFilter, platformFilter]);
+  setCurrentPage(1);
+  fetchBookings(1);
+}, [debouncedSearchTerm, statusFilter, platformFilter, debouncedFromDate, debouncedToDate, itemsPerPage]);
 
-  const fetchBookings = async () => {
-    try {
-      const response = await axios.get(
-        "https://mobile-booking-backend.vercel.app/api/bookings"
-      );
-      setBookings(response.data);
-    } catch (error) {
-      toast.error("Error fetching bookings");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchBookings = async (page = currentPage) => {
+  try {
+    setDataLoading(true);
+    const params = {
+      page,
+      limit: itemsPerPage,
+    };
+
+    if (debouncedSearchTerm) params.search = debouncedSearchTerm;
+    if (statusFilter) params.status = statusFilter;
+    if (platformFilter) params.platform = platformFilter;
+    if (debouncedFromDate) params.fromDate = debouncedFromDate;
+    if (debouncedToDate) params.toDate = debouncedToDate;
+
+    const response = await axios.get(
+      "https://mobile-booking-backend.vercel.app/api/bookings",
+      { params }
+    );
+    
+    setBookings(response.data.bookings);
+    setTotalPages(response.data.pagination.totalPages);
+    setTotalItems(response.data.pagination.totalItems);
+  } catch (error) {
+    toast.error("Error fetching bookings");
+    console.error("Fetch bookings error:", error);
+  } finally {
+    setDataLoading(false);
+    setLoading(false); // Also set main loading to false
+  }
+};
 
   const fetchPlatforms = async () => {
     try {
@@ -142,45 +178,78 @@ const Bookings = () => {
     }
   };
 
-  const filterBookings = () => {
-    let filtered = bookings;
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (booking) =>
-          booking.mobileModel
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          booking.platform.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (booking.bookingId &&
-            booking.bookingId
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase())) ||
-          (booking.userId?.username &&
-            booking.userId.username
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase()))
+  // Handle export functionality
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      
+      if (!exportFromDate && !exportToDate) {
+        toast.error("Please select at least one date for export");
+        return;
+      }
+
+      const params = {
+        format: exportFormat,
+      };
+
+      if (exportFromDate) params.fromDate = exportFromDate;
+      if (exportToDate) params.toDate = exportToDate;
+
+      const response = await axios.get(
+        "https://mobile-booking-backend.vercel.app/api/bookings/export",
+        { 
+          params,
+          responseType: exportFormat === 'csv' ? 'blob' : 'json'
+        }
       );
+
+      if (exportFormat === 'csv') {
+        // Handle CSV download
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `bookings-${exportFromDate || 'all'}-to-${exportToDate || 'all'}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("Data exported successfully as CSV! 📊");
+      } else {
+        // For JSON, you can implement Excel export here
+        // For now, we'll download as JSON file
+        const dataStr = JSON.stringify(response.data, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `bookings-${exportFromDate || 'all'}-to-${exportToDate || 'all'}.json`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("Data exported successfully as JSON! 📊");
+      }
+
+      setShowExportModal(false);
+      setExportFromDate("");
+      setExportToDate("");
+    } catch (error) {
+      toast.error("Error exporting data");
+      console.error("Export error:", error);
+    } finally {
+      setExporting(false);
     }
-    if (statusFilter) {
-      filtered = filtered.filter((booking) => booking.status === statusFilter);
-    }
-    if (platformFilter) {
-      filtered = filtered.filter(
-        (booking) => booking.platform === platformFilter
-      );
-    }
-    setFilteredBookings(filtered);
-    setCurrentPage(1);
   };
 
-  // Group bookings by user and then by batch/bill
+  // Group bookings by user and then by batch/bill (for admin view)
   const userGroupedBookings = useMemo(() => {
-    const grouped = filteredBookings.reduce((acc, booking) => {
+    const grouped = bookings.reduce((acc, booking) => {
       const userId = booking.userId?._id || "unknown_user";
       const userName = booking.userId?.username || "Unknown User";
       const batchId =
         booking.dealerBatchId?.batchId ||
-        `B${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`; // Fallback for bookings without batchId
+        `B${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`;
+      
       if (!acc[userId]) {
         acc[userId] = {
           userId,
@@ -191,18 +260,19 @@ const Bookings = () => {
           paidAmount: 0,
         };
       }
+      
       if (!acc[userId].bills[batchId]) {
         acc[userId].bills[batchId] = {
           billId: batchId,
           items: [],
-          status: "pending", // Default status for a bill
+          status: "pending",
           totalBookingPrice: 0,
           totalSellingPrice: 0,
           isPaid: false,
           canMakePayment: false,
         };
       }
-      // Add booking as an item to the bill
+      
       acc[userId].bills[batchId].items.push({
         _id: booking._id,
         mobileModel: booking.mobileModel,
@@ -212,45 +282,36 @@ const Bookings = () => {
         bookingDate: booking.bookingDate,
         platform: booking.platform,
       });
-      // Update bill totals
-      acc[userId].bills[batchId].totalBookingPrice += Number(
-        booking.bookingPrice
-      );
-      acc[userId].bills[batchId].totalSellingPrice += Number(
-        booking.sellingPrice || booking.bookingPrice
-      );
-      // Update user totals
+      
+      acc[userId].bills[batchId].totalBookingPrice += Number(booking.bookingPrice);
+      acc[userId].bills[batchId].totalSellingPrice += Number(booking.sellingPrice || booking.bookingPrice);
+      
       acc[userId].totalBookings += 1;
       acc[userId].totalAmount += Number(booking.bookingPrice);
+      
       if (booking.status === "payment_done") {
-        acc[userId].paidAmount += Number(
-          booking.sellingPrice || booking.bookingPrice
-        );
+        acc[userId].paidAmount += Number(booking.sellingPrice || booking.bookingPrice);
       }
-      // Determine bill status and payment eligibility
+      
       const allItemsPaid = acc[userId].bills[batchId].items.every(
         (item) => item.status === "payment_done"
       );
       const allItemsGivenToAdmin = acc[userId].bills[batchId].items.every(
         (item) => item.status === "given_to_dealer"
       );
+      
       acc[userId].bills[batchId].isPaid = allItemsPaid;
-      acc[userId].bills[batchId].status = allItemsPaid ? "paid" : "pending"; // Update bill status based on items
-      acc[userId].bills[batchId].canMakePayment =
-        allItemsGivenToAdmin && !allItemsPaid;
+      acc[userId].bills[batchId].status = allItemsPaid ? "paid" : "pending";
+      acc[userId].bills[batchId].canMakePayment = allItemsGivenToAdmin && !allItemsPaid;
+      
       return acc;
     }, {});
+    
     return Object.values(grouped).map((user) => ({
       ...user,
       bills: Object.values(user.bills),
     }));
-  }, [filteredBookings]);
-
-  // Pagination logic for table view
-  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentBookings = filteredBookings.slice(startIndex, endIndex);
+  }, [bookings]);
 
   const handleChange = (e) => {
     setFormData({
@@ -263,19 +324,19 @@ const Bookings = () => {
     e.preventDefault();
     try {
       if (editingBooking) {
-        const dataToSend =
-          user.role === "admin"
-            ? {
-                sellingPrice: formData.sellingPrice,
-                notes: formData.notes,
-                status: formData.status,
-                bookingAccount: formData.bookingAccount,
-                dealer: formData.dealer,
-                bookingId: formData.bookingId,
-                assignedToDealerId: formData.assignedToDealerId || null,
-                dealerAmount: formData.dealerAmount,
-              }
-            : formData;
+        const dataToSend = user.role === "admin"
+          ? {
+              sellingPrice: formData.sellingPrice,
+              notes: formData.notes,
+              status: formData.status,
+              bookingAccount: formData.bookingAccount,
+              dealer: formData.dealer,
+              bookingId: formData.bookingId,
+              assignedToDealerId: formData.assignedToDealerId || null,
+              dealerAmount: formData.dealerAmount,
+            }
+          : formData;
+        
         await axios.put(
           `https://mobile-booking-backend.vercel.app/api/bookings/${editingBooking._id}`,
           dataToSend
@@ -331,33 +392,27 @@ const Bookings = () => {
     }
   };
 
-  // Replace the old function with THIS ONE
-const handleStatusChange = async (id, status) => {
-  // Create a user-friendly message from the status string (e.g., "given_to_admin" -> "given to admin")
-  const actionText = status.replace(/_/g, " ");
-  const confirmationMessage = `Are you sure you want to mark this booking as "${actionText}"?`;
+  const handleStatusChange = async (id, status) => {
+    const actionText = status.replace(/_/g, " ");
+    const confirmationMessage = `Are you sure you want to mark this booking as "${actionText}"?`;
 
-  // Use window.confirm to show the popup
-  if (window.confirm(confirmationMessage)) {
-    try {
-      await axios.patch(
-        `https://mobile-booking-backend.vercel.app/api/bookings/${id}/status`,
-        {
-          status,
-        }
-      );
-      toast.success("Status updated successfully! ✅");
-      fetchBookings();
-    } catch (error) {
-      toast.error("Error updating status");
+    if (window.confirm(confirmationMessage)) {
+      try {
+        await axios.patch(
+          `https://mobile-booking-backend.vercel.app/api/bookings/${id}/status`,
+          { status }
+        );
+        toast.success("Status updated successfully! ✅");
+        fetchBookings();
+      } catch (error) {
+        toast.error("Error updating status");
+      }
     }
-  }
-};
+  };
 
   const handleMarkBillPaymentClick = (userInfo, bill) => {
     setSelectedBillForPayment(bill);
     setSelectedUserForPayment(userInfo);
-    // Initialize tempSellingPrices with current selling prices from the bill items
     const initialPrices = Object.fromEntries(
       bill.items.map((item) => [item._id, item.sellingPrice])
     );
@@ -370,7 +425,6 @@ const handleStatusChange = async (id, status) => {
     if (!selectedBillForPayment || !selectedUserForPayment) return;
 
     try {
-      // Update all items in the bill to payment_done status with their potentially edited selling prices
       const updatePromises = selectedBillForPayment.items.map((item) => {
         const newSellingPrice = tempSellingPrices[item._id];
         if (!newSellingPrice || isNaN(Number(newSellingPrice))) {
@@ -388,7 +442,7 @@ const handleStatusChange = async (id, status) => {
       setShowUserPaymentModal(false);
       setSelectedBillForPayment(null);
       setSelectedUserForPayment(null);
-      setTempSellingPrices({}); // Clear temp prices
+      setTempSellingPrices({});
       fetchBookings();
     } catch (error) {
       toast.error(
@@ -397,7 +451,6 @@ const handleStatusChange = async (id, status) => {
     }
   };
 
-  // Handle individual item price update (for table view)
   const handleItemPriceUpdate = async (bookingId, newSellingPrice) => {
     if (!newSellingPrice || isNaN(Number(newSellingPrice))) {
       toast.error("Please enter a valid price");
@@ -412,7 +465,6 @@ const handleStatusChange = async (id, status) => {
       );
       toast.success("Selling price updated successfully! 💰");
       fetchBookings();
-      // Clear the editing state for this item
       setEditingPrices((prev) => {
         const newState = { ...prev };
         delete newState[bookingId];
@@ -425,12 +477,9 @@ const handleStatusChange = async (id, status) => {
     }
   };
 
-  // Generate PDF bill
   const handleGenerateBillPdf = (userInfo, bill) => {
-    // Create new PDF document
     const doc = new jsPDF();
 
-    // Add title and user information
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.text("MOBILE BOOKING BILL", 105, 20, { align: "center" });
@@ -438,14 +487,12 @@ const handleStatusChange = async (id, status) => {
     doc.setFontSize(14);
     doc.text(`Bill for: ${userInfo.userName}`, 105, 30, { align: "center" });
 
-    // Bill details
     doc.setFont("helvetica", "normal");
     doc.setFontSize(12);
     doc.text(`Bill ID: ${bill.billId}`, 14, 40);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 48);
     doc.text(`Status: ${bill.status.toUpperCase()}`, 14, 56);
 
-    // Prepare table data
     const tableData = bill.items.map((item, index) => [
       index + 1,
       item.mobileModel,
@@ -454,7 +501,6 @@ const handleStatusChange = async (id, status) => {
       new Date(item.bookingDate).toLocaleDateString(),
     ]);
 
-    // Add table using autoTable
     autoTable(doc, {
       startY: 65,
       head: [
@@ -480,17 +526,14 @@ const handleStatusChange = async (id, status) => {
         2: { cellWidth: 25, halign: "right" },
         3: { cellWidth: 25, halign: "right" },
         4: { cellWidth: 25, halign: "center" },
-        5: { cellWidth: 25, halign: "center" },
       },
       margin: { top: 65 },
       tableWidth: "wrap",
       halign: "center",
     });
 
-    // Get the final Y position after the table
     const finalY = doc.lastAutoTable.finalY + 15;
 
-    // Add summary section
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
     doc.text("SUMMARY", 14, finalY);
@@ -510,10 +553,10 @@ const handleStatusChange = async (id, status) => {
     );
 
     const profitLoss = bill.totalSellingPrice - bill.totalBookingPrice;
-    const profitLossColor = profitLoss >= 0 ? [0, 128, 0] : [255, 0, 0]; // Green for profit, red for loss
+    const profitLossColor = profitLoss >= 0 ? [0, 128, 0] : [255, 0, 0];
     doc.setTextColor(...profitLossColor);
     doc.text(`Profit/Loss: ${profitLoss.toLocaleString()}`, 14, finalY + 34);
-    doc.setTextColor(0, 0, 0); // Reset to black
+    doc.setTextColor(0, 0, 0);
 
     doc.text(
       `Payment Status: ${bill.isPaid ? "PAID" : "PENDING"}`,
@@ -527,20 +570,17 @@ const handleStatusChange = async (id, status) => {
       doc.setTextColor(0, 0, 0);
     }
 
-    // Add footer
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 285, {
       align: "center",
     });
 
-    // Save the PDF
     const fileName = `Bill_${bill.billId}_${userInfo.userName.replace(
       /\s/g,
       "_"
     )}.pdf`;
     doc.save(fileName);
 
-    // Optional: Show success message
     toast.success("Bill PDF generated and downloaded! 📄");
   };
 
@@ -557,22 +597,22 @@ const handleStatusChange = async (id, status) => {
   };
 
   const resetForm = () => {
-  setFormData({
-    bookingDate: new Date().toISOString().split('T')[0], // Today's date
-    mobileModel: "",
-    bookingPrice: "",
-    sellingPrice: "",
-    platform: "",
-    card: "",
-    notes: "",
-    bookingAccount: "",
-    dealer: "",
-    bookingId: "",
-    status: "",
-    assignedToDealerId: "",
-    dealerAmount: "",
-  });
-};
+    setFormData({
+      bookingDate: new Date().toISOString().split('T')[0],
+      mobileModel: "",
+      bookingPrice: "",
+      sellingPrice: "",
+      platform: "",
+      card: "",
+      notes: "",
+      bookingAccount: "",
+      dealer: "",
+      bookingId: "",
+      status: "",
+      assignedToDealerId: "",
+      dealerAmount: "",
+    });
+  };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -590,7 +630,7 @@ const handleStatusChange = async (id, status) => {
         color: "bg-green-100 text-green-800",
         label: "Payment Done",
       },
-      paid: { color: "bg-green-100 text-green-800", label: "Paid" }, // For bill status
+      paid: { color: "bg-green-100 text-green-800", label: "Paid" },
     };
     const config = statusConfig[status] || {
       color: "bg-gray-100 text-gray-800",
@@ -631,10 +671,8 @@ const handleStatusChange = async (id, status) => {
     );
   };
 
-  // Get appropriate action buttons based on status and user role
   const getActionButtons = (booking) => {
     const buttons = [];
-    // Always show edit and delete for admin, only edit for users on their own bookings
     if (user.role === "admin" || booking.userId?._id === user.id || user.role === "user") {
       buttons.push(
         <button
@@ -661,7 +699,6 @@ const handleStatusChange = async (id, status) => {
         </button>
       );
     }
-    // Status-based action buttons with proper labels
     if (booking.status === "pending") {
       buttons.push(
         <button
@@ -698,13 +735,27 @@ const handleStatusChange = async (id, status) => {
     "payment_done",
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchBookings(page);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("");
+    setPlatformFilter("");
+    setFromDate("");
+    setToDate("");
+    setCurrentPage(1);
+  };
+
+  if (loading && currentPage === 1) {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+  );
+}
 
   return (
     <div className="w-full max-w-full overflow-x-hidden">
@@ -725,7 +776,7 @@ const handleStatusChange = async (id, status) => {
             <div className="p-4 sm:p-6">
               <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
                 {/* Search and Filters */}
-                <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+                <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 flex-wrap">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
@@ -733,7 +784,7 @@ const handleStatusChange = async (id, status) => {
                       placeholder="Search bookings..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 pr-4 py-2 w-full sm:w-auto border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      className="pl-10 pr-4 py-2 w-full sm:w-64 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     />
                   </div>
                   <select
@@ -762,9 +813,45 @@ const handleStatusChange = async (id, status) => {
                   </select>
                 </div>
 
+                {/* Date Filters */}
+                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm w-full sm:w-auto"
+                      placeholder="From Date"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm w-full sm:w-auto"
+                      placeholder="To Date"
+                    />
+                  </div>
+                  {(searchTerm || statusFilter || platformFilter || fromDate || toDate) && (
+                    <button
+                      onClick={clearFilters}
+                      className="flex items-center justify-center px-3 py-2 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 text-sm"
+                      title="Clear all filters"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-                  <button className="flex items-center justify-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+                  <button 
+                    onClick={() => setShowExportModal(true)}
+                    className="flex items-center justify-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Export
                   </button>
@@ -784,10 +871,34 @@ const handleStatusChange = async (id, status) => {
             </div>
           </div>
 
+          {/* Results Count */}
+          {/* Results Count with Loading */}
+<div className="mb-4 flex items-center justify-between">
+  <p className="text-sm text-gray-600">
+    Showing {bookings.length} of {totalItems.toLocaleString()} bookings
+    {(fromDate || toDate) && (
+      <span className="ml-2">
+        • Date range: {fromDate || "Start"} to {toDate || "End"}
+      </span>
+    )}
+  </p>
+  {dataLoading && (
+    <div className="flex items-center text-sm text-blue-600">
+      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+      Updating...
+    </div>
+  )}
+</div>
+
           {/* Admin View - Desktop Table View with User Grouping */}
           {user.role === "admin" && (
-            <div className="hidden md:block space-y-4">
-              {userGroupedBookings.length > 0 ? (
+  <div className="hidden md:block space-y-4">
+    {dataLoading ? (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading bookings...</p>
+      </div>
+    ) : userGroupedBookings.length > 0 ? (
                 userGroupedBookings.map((userBooking) => (
                   <div
                     key={userBooking.userId}
@@ -809,8 +920,8 @@ const handleStatusChange = async (id, status) => {
                             </h3>
                             <p className="text-sm text-gray-500">
                               {userBooking.totalBookings} bookings • Total: ₹
-                              {userBooking.totalAmount.toLocaleString()} • Paid:
-                              ₹{userBooking.paidAmount.toLocaleString()}
+                              {userBooking.totalAmount.toLocaleString()} • Paid: ₹
+                              {userBooking.paidAmount.toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -1077,7 +1188,7 @@ const handleStatusChange = async (id, status) => {
                     No bookings found
                   </h3>
                   <p className="text-gray-600 mb-6">
-                    {searchTerm || statusFilter || platformFilter
+                    {searchTerm || statusFilter || platformFilter || fromDate || toDate
                       ? "Try adjusting your filters to see more results."
                       : "Create your first booking to get started!"}
                   </p>
@@ -1099,8 +1210,14 @@ const handleStatusChange = async (id, status) => {
 
           {/* User View - Simple Table (Hidden on mobile) */}
           {user.role === "user" && (
-            <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
+  <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    {dataLoading ? (
+      <div className="p-8 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading bookings...</p>
+      </div>
+    ) : (
+      <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -1131,7 +1248,7 @@ const handleStatusChange = async (id, status) => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {currentBookings.map((booking) => (
+                    {bookings.map((booking) => (
                       <tr key={booking._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {new Date(booking.bookingDate).toLocaleDateString()}
@@ -1183,21 +1300,17 @@ const handleStatusChange = async (id, status) => {
                   </tbody>
                 </table>
               </div>
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                totalItems={filteredBookings.length}
-                onItemsPerPageChange={setItemsPerPage}
-              />
-            </div>
-          )}
-
+    )}
+  </div>
+)}
           {/* Mobile View */}
-          <div className="md:hidden space-y-4">
-            {/* Admin Mobile View - Collapsible */}
-            {user.role === "admin" ? (
+         <div className="md:hidden space-y-4">
+  {dataLoading ? (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p className="text-gray-600">Loading bookings...</p>
+    </div>
+  ) : user.role === "admin" ? (
               userGroupedBookings.length > 0 ? (
                 userGroupedBookings.map((userBooking) => (
                   <div
@@ -1416,7 +1529,7 @@ const handleStatusChange = async (id, status) => {
                     No bookings found
                   </h3>
                   <p className="text-gray-600 mb-6">
-                    {searchTerm || statusFilter || platformFilter
+                    {searchTerm || statusFilter || platformFilter || fromDate || toDate
                       ? "Try adjusting your filters to see more results."
                       : "Create your first booking to get started!"}
                   </p>
@@ -1434,8 +1547,8 @@ const handleStatusChange = async (id, status) => {
                 </div>
               )
             ) : /* User Mobile View - Simple Cards */
-            currentBookings.length > 0 ? (
-              currentBookings.map((booking) => (
+            bookings.length > 0 ? (
+              bookings.map((booking) => (
                 <div
                   key={booking._id}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
@@ -1502,7 +1615,7 @@ const handleStatusChange = async (id, status) => {
                   No bookings found
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  {searchTerm || statusFilter || platformFilter
+                  {searchTerm || statusFilter || platformFilter || fromDate || toDate
                     ? "Try adjusting your filters to see more results."
                     : "Create your first booking to get started!"}
                 </p>
@@ -1519,20 +1632,24 @@ const handleStatusChange = async (id, status) => {
                 </button>
               </div>
             )}
-            {/* Mobile Pagination */}
-            {user.role === "user" && totalPages > 1 && (
-              <div className="mt-6">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                  itemsPerPage={itemsPerPage}
-                  totalItems={filteredBookings.length}
-                  onItemsPerPageChange={setItemsPerPage}
-                />
-              </div>
-            )}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                itemsPerPage={itemsPerPage}
+                totalItems={totalItems}
+                onItemsPerPageChange={(newItemsPerPage) => {
+                  setItemsPerPage(newItemsPerPage);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -1548,20 +1665,7 @@ const handleStatusChange = async (id, status) => {
                 onClick={() => setShowModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <span className="sr-only">Close</span>
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <X className="h-6 w-6" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -1800,12 +1904,99 @@ const handleStatusChange = async (id, status) => {
         </div>
       )}
 
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">
+                Export Bookings
+              </h3>
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date Range
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={exportFromDate}
+                      onChange={(e) => setExportFromDate(e.target.value)}
+                      className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      placeholder="From Date"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={exportToDate}
+                      onChange={(e) => setExportToDate(e.target.value)}
+                      className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      placeholder="To Date"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Select at least one date for export
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Export Format
+                </label>
+                <select
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="csv">CSV (Excel compatible)</option>
+                  <option value="json">JSON</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={exporting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting || (!exportFromDate && !exportToDate)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {exporting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Exporting...
+                  </>
+                ) : (
+                  "Export Data"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Payment Modal */}
       {showUserPaymentModal &&
         selectedBillForPayment &&
         selectedUserForPayment && (
           <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">
                   Process Bill Payment
@@ -1814,20 +2005,7 @@ const handleStatusChange = async (id, status) => {
                   onClick={() => setShowUserPaymentModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  <span className="sr-only">Close</span>
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <X className="h-6 w-6" />
                 </button>
               </div>
               <form onSubmit={handleBillPaymentSubmit} className="p-6">
@@ -1892,7 +2070,7 @@ const handleStatusChange = async (id, status) => {
                 <div className="mb-6 p-4 bg-blue-50 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium text-gray-700">
-                      Total Amount (based on current selling prices):
+                      Total Amount:
                     </span>
                     <span className="text-lg font-bold text-gray-900">
                       ₹
